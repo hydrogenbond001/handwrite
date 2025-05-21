@@ -1,0 +1,6 @@
+/ncnn-20250428/
+/opencv-4.10.0/
+/build/
+*.zip
+/opencv_MSVC/
+/ncnn_MSVC/
