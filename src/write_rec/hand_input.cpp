@@ -2,8 +2,7 @@
 #include <opencv2/opencv.hpp>
 #include <main.h>
 #include <iostream>
-
-#define CANVAS_SIZE 28*4
+#define CANVAS_SIZE 28 * 4
 #define SCALE_FACTOR 4 // 将28x28放大显示
 
 // 全局变量
@@ -135,42 +134,91 @@ void DrawCanvas(HDC hdc)
     }
     DeleteObject(hBrush);
 }
-
-cv::Mat getImageFromClipboard()
+cv::Mat g_screen, g_temp;
+cv::Rect g_rect;
+bool drawing = false;
+cv::Point startPoint;
+cv::Mat captureScreen()
 {
-    if (!OpenClipboard(nullptr))
+    HWND hwndDesktop = GetDesktopWindow();
+    HDC hdcWindow = GetDC(hwndDesktop);
+    HDC hdcMemDC = CreateCompatibleDC(hdcWindow);
+
+    int width = GetSystemMetrics(SM_CXSCREEN);
+    int height = GetSystemMetrics(SM_CYSCREEN);
+
+    HBITMAP hBitmap = CreateCompatibleBitmap(hdcWindow, width, height);
+    SelectObject(hdcMemDC, hBitmap);
+    BitBlt(hdcMemDC, 0, 0, width, height, hdcWindow, 0, 0, SRCCOPY);
+
+    BITMAP bmp;
+    GetObject(hBitmap, sizeof(BITMAP), &bmp);
+
+    cv::Mat mat(height, width, CV_8UC4);
+    GetBitmapBits(hBitmap, bmp.bmHeight * bmp.bmWidthBytes, mat.data);
+
+    DeleteObject(hBitmap);
+    DeleteDC(hdcMemDC);
+    ReleaseDC(hwndDesktop, hdcWindow);
+
+    cv::Mat mat_bgr;
+    cv::cvtColor(mat, mat_bgr, cv::COLOR_BGRA2BGR);
+    return mat_bgr;
+}
+
+void mouseCallback(int event, int x, int y, int, void *userdata)
+{
+    if (event == cv::EVENT_LBUTTONDOWN)
     {
-        std::cerr << "Failed to open clipboard." << std::endl;
-        return {};
+        drawing = true;
+        startPoint = cv::Point(x, y);
+        g_temp = g_screen.clone();
+    }
+    else if (event == cv::EVENT_MOUSEMOVE && drawing)
+    {
+        g_temp = g_screen.clone();
+        cv::rectangle(g_temp, startPoint, cv::Point(x, y), cv::Scalar(0, 255, 0), 2);
+        cv::imshow("Select Region", g_temp);
+    }
+    else if (event == cv::EVENT_LBUTTONUP && drawing)
+    {
+        drawing = false;
+        g_rect = cv::Rect(startPoint, cv::Point(x, y));
+        cv::destroyWindow("Select Region");
+        *static_cast<bool *>(userdata) = true;
+    }
+}
+
+void manualScreenshotAndOCR()
+{
+    g_screen = captureScreen();
+    g_temp = g_screen.clone();
+
+    bool finished = false;
+    cv::namedWindow("Select Region", cv::WINDOW_NORMAL);
+    cv::setWindowProperty("Select Region", cv::WND_PROP_FULLSCREEN, cv::WINDOW_FULLSCREEN);
+    cv::setMouseCallback("Select Region", mouseCallback, &finished);
+    cv::imshow("Select Region", g_temp);
+
+    while (!finished)
+    {
+        cv::waitKey(30);
     }
 
-    HANDLE hData = GetClipboardData(CF_DIB);
-    if (!hData)
+    if (g_rect.width > 0 && g_rect.height > 0)
     {
-        CloseClipboard();
-        std::cerr << "No image in clipboard." << std::endl;
-        return {};
-    }
+        cv::Mat roi = g_screen(g_rect);
+        std::string result = runOCR(roi); // 直接调用全局 OCR 函数
+        std::cout << "OCR Result: " << result << std::endl;
 
-    BITMAPINFO *bmpInfo = (BITMAPINFO *)GlobalLock(hData);
-    if (!bmpInfo)
+        cv::imshow("Selected Region", roi);
+        cv::waitKey(2000);
+        cv::destroyAllWindows();
+    }
+    else
     {
-        CloseClipboard();
-        std::cerr << "Failed to lock image data." << std::endl;
-        return {};
+        std::cout << "未选中区域，取消 OCR。" << std::endl;
     }
-
-    int width = bmpInfo->bmiHeader.biWidth;
-    int height = abs(bmpInfo->bmiHeader.biHeight); // may be negative
-    int channels = bmpInfo->bmiHeader.biBitCount / 8;
-
-    BYTE *pixelData = (BYTE *)bmpInfo + bmpInfo->bmiHeader.biSize;
-    cv::Mat img(height, width, (channels == 3 ? CV_8UC3 : CV_8UC4), pixelData);
-    cv::Mat imgCopy = img.clone(); // Copy before unlocking
-
-    GlobalUnlock(hData);
-    CloseClipboard();
-    return imgCopy;
 }
 
 void ClearCanvas()
@@ -318,37 +366,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case 3:
         {
-            system("start ms-screenclip"); // 打开系统截图工具（Win+Shift+S）
-            std::cout << "请使用鼠标截图，截图后按下回车继续..." << std::endl;
-            std::cin.get(); // 等待用户截图并回车
-
-            cv::Mat img = getImageFromClipboard();
-            if (img.empty())
-            {
-                std::cout << "截图失败或剪贴板无图像！" << std::endl;
-                break;
-            }
-
-            // OpenCV 剪贴板图像为 BGRA，转 RGB
-            if (img.channels() == 4)
-            {
-                cv::cvtColor(img, img, cv::COLOR_BGRA2RGB);
-            }
-            else if (img.channels() == 3)
-            {
-                cv::cvtColor(img, img, cv::COLOR_BGR2RGB);
-            }
-
-            std::string ocrResult = runOCR(img);
-            std::cout << "OCR 识别结果: " << ocrResult << std::endl;
-
-            cv::imshow("截图", img);
-            cv::waitKey(3000);
-            cv::destroyAllWindows();
+            manualScreenshotAndOCR();
             break;
         }
 
         case 4:
+            std::cout << "Clear" << std::endl;
             ClearCanvas();
             break;
         }
@@ -358,7 +381,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
         if (hBitmap)
             DeleteObject(hBitmap);
         PostQuitMessage(0);
-        cv::destroyAllWindows();
+
+        // cv::destroyAllWindows();
         return 0;
     }
     return DefWindowProc(hwnd, message, wParam, lParam);
