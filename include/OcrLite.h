@@ -31,7 +31,7 @@ public:
                      int padding, int maxSideLen,
                      float boxScoreThresh, float boxThresh, float unClipRatio, bool doAngle, bool mostAngle);
     
-    OcrResult detect(const cv::Mat& mat,
+    OcrResult detect_img(const cv::Mat& mat,
         int padding, int maxSideLen,
         float boxScoreThresh, float boxThresh, float unClipRatio, bool doAngle, bool mostAngle);
 private:
@@ -51,6 +51,10 @@ private:
                      cv::Mat &src, cv::Rect &originRect, ScaleParam &scale,
                      float boxScoreThresh = 0.6f, float boxThresh = 0.3f,
                      float unClipRatio = 2.0f, bool doAngle = true, bool mostAngle = true);
+    // OcrResult detect_img(const cv::Mat &src, int padding, int maxSideLen,
+    //              float boxScoreThresh, float boxThresh, float unClipRatio,
+    //              bool doAngle, bool mostAngle);
+
 };
 
 #endif //__OCR_LITE_H__

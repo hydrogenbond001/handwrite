@@ -2,6 +2,8 @@
 #define __MAIN_H__
 
 #include "getopt.h"
+#include <string>
+#include <opencv2/opencv.hpp>
 
 static const struct option long_options[] = {
         {"models",         required_argument, NULL, 'd'},
@@ -53,4 +55,5 @@ const char *otherMsg = "-v --version: show version\n" \
 const char *example1Msg = "Example1: %s --models models --det det --cls cls --rec rec --keys keys.txt --image 1.jpg --GPU 0\n";
 const char *example2Msg = "Example2: %s -d models -1 det -2 cls -3 rec -4 keys.txt -i 1.jpg -t 4 -p 50 -s 0 -b 0.6 -o 0.3 -u 2.0 -a 1 -A 1 -G 0\n";
 
+std::string runOCR(const cv::Mat &img);
 #endif //__MAIN_H__
