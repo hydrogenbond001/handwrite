@@ -371,7 +371,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
 
         case 4:
-            std::cout << "case 4" << std::endl;
+            std::cout << "Clear" << std::endl;
             ClearCanvas();
             break;
         }
