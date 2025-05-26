@@ -2,6 +2,9 @@
 #include <opencv2/opencv.hpp>
 #include <main.h>
 #include <iostream>
+#include "OcrLite.h"
+#include <fstream>
+
 #define CANVAS_SIZE 28 * 4
 #define SCALE_FACTOR 4 // 将28x28放大显示
 
@@ -210,6 +213,18 @@ void manualScreenshotAndOCR()
         cv::Mat roi = g_screen(g_rect);
         std::string result = runOCR(roi); // 直接调用全局 OCR 函数
         std::cout << "OCR Result: " << result << std::endl;
+
+        // 保存结果到 TXT 文件
+        std::ofstream outFile("ocr_result.txt", std::ios::app); // 追加写入
+        if (outFile.is_open())
+        {
+            outFile << "OCR Result: " << result << std::endl;
+            outFile.close();
+        }
+        else
+        {
+            std::cerr << "无法写入 ocr_result.txt 文件！" << std::endl;
+        }
 
         cv::imshow("Selected Region", roi);
         cv::waitKey(2000);

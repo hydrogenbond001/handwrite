@@ -98,9 +98,32 @@ OcrResult OcrLite::detect(const char *path, const char *imgName,
                     boxScoreThresh, boxThresh, unClipRatio, doAngle, mostAngle);
     return result;
 }
+// OcrResult OcrLite::detect_img(const cv::Mat &src, int padding, int maxSideLen,
+//                           float boxScoreThresh, float boxThresh, float unClipRatio,
+//                           bool doAngle, bool mostAngle) {
+//     cv::Mat rgbSrc;
+//     if (src.channels() == 3) {
+//         cv::cvtColor(src, rgbSrc, cv::COLOR_BGR2RGB);
+//     } else {
+//         rgbSrc = src.clone(); // Assume already RGB or grayscale
+//     }
+
+//     int originMaxSide = std::max(rgbSrc.cols, rgbSrc.rows);
+//     int resize = (maxSideLen <= 0 || maxSideLen > originMaxSide) ? originMaxSide : maxSideLen;
+//     resize += 2 * padding;
+
+//     cv::Rect paddingRect(padding, padding, rgbSrc.cols, rgbSrc.rows);//绘制矩形
+//     cv::Mat paddingSrc = makePadding(rgbSrc, padding);
+//     ScaleParam scale = getScaleParam(paddingSrc, resize);
+
+//     OcrResult result = detect("in_memory", "in_memory", paddingSrc, paddingRect, scale,
+//                               boxScoreThresh, boxThresh, unClipRatio, doAngle, mostAngle);
+//     return result;
+// }
+
 OcrResult OcrLite::detect_img(const cv::Mat &src, int padding, int maxSideLen,
-                          float boxScoreThresh, float boxThresh, float unClipRatio,
-                          bool doAngle, bool mostAngle) {
+                              float boxScoreThresh, float boxThresh, float unClipRatio,
+                              bool doAngle, bool mostAngle) {
     cv::Mat rgbSrc;
     if (src.channels() == 3) {
         cv::cvtColor(src, rgbSrc, cv::COLOR_BGR2RGB);
@@ -118,6 +141,29 @@ OcrResult OcrLite::detect_img(const cv::Mat &src, int padding, int maxSideLen,
 
     OcrResult result = detect("in_memory", "in_memory", paddingSrc, paddingRect, scale,
                               boxScoreThresh, boxThresh, unClipRatio, doAngle, mostAngle);
+
+    // --- 可视化：将识别框和文字画在图像上 ---
+    for (const auto &tb : result.textBlocks) {
+        std::vector<cv::Point> points;
+        for (const auto &pt : tb.boxPoint) {
+            points.emplace_back(cv::Point((int)pt.x, (int)pt.y));
+        }
+
+        // 绘制轮廓线
+        cv::polylines(rgbSrc, points, true, cv::Scalar(0, 255, 0), 2);
+
+        // 写入文字（左上角作为文字起点）
+        if (!tb.text.empty()) {
+            cv::putText(rgbSrc, tb.text, points[0], cv::FONT_HERSHEY_SIMPLEX, 0.5,
+                        cv::Scalar(255, 0, 0), 1);
+        }
+    }
+
+    // 显示结果图像
+    cv::imshow("OCR Result", rgbSrc);
+    cv::waitKey(0);
+    cv::destroyWindow("OCR Result");
+
     return result;
 }
 
