@@ -46,7 +46,8 @@ file(GLOB_RECURSE SRC_FILES
     #  "${CMAKE_SOURCE_DIR}/src/dbnet/*.cpp"
     #  "${CMAKE_SOURCE_DIR}/src/crnn/*.cpp"
     # "${CMAKE_SOURCE_DIR}/src/handwrite/*.c"
-    "${CMAKE_SOURCE_DIR}/src/write_rec/*.cpp"
+    # "${CMAKE_SOURCE_DIR}/src/write_rec/*.cpp"
+    "${CMAKE_SOURCE_DIR}/src/screen_cut_rec/*.cpp"
     # opencv.cpp
      )
 
