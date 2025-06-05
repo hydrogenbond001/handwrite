@@ -3,8 +3,8 @@
 #include <string>
 #include <iostream>
 #include <main.h>
-#define WINDOW_WIDTH 800
-#define WINDOW_HEIGHT 600
+#define WINDOW_WIDTH 500
+#define WINDOW_HEIGHT 300
 
 // 全局变量
 HWND hwndMain;
@@ -21,19 +21,21 @@ LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 void CreateUI(HWND hwnd);
 void CaptureScreen();
 void OnScreenshot();
-std::string RunOCR(const cv::Mat& image);
-void DisplayResult(const std::string& text);
+std::string RunOCR(const cv::Mat &image);
+void DisplayResult(const std::string &text);
 
 // 主函数
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR szCmdLine, int iCmdShow)
 {
+    SetProcessDPIAware(); // Windows高DPI适配
+    ::ShowWindow(::GetConsoleWindow(), SW_HIDE);
     // 注册窗口类
     WNDCLASS wc = {0};
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hInstance;
-    wc.hbrBackground = (HBRUSH)(COLOR_WINDOW+1);
+    wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
     wc.lpszClassName = TEXT("ScreenOCR");
-    
+
     if (!RegisterClass(&wc))
     {
         MessageBox(NULL, TEXT("Window Registration Failed!"), TEXT("Error"), MB_ICONERROR);
@@ -42,10 +44,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR szCmdLine,
 
     // 创建窗口
     hwndMain = CreateWindow(
-        TEXT("ScreenOCR"), 
-        TEXT("屏幕截图OCR识别工具"), 
+        TEXT("ScreenOCR"),
+        TEXT("屏幕截图OCR识别工具"),
         WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, CW_USEDEFAULT, 
+        CW_USEDEFAULT, CW_USEDEFAULT,
         WINDOW_WIDTH, WINDOW_HEIGHT,
         NULL, NULL, hInstance, NULL);
 
@@ -77,28 +79,28 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR szCmdLine,
 void CreateUI(HWND hwnd)
 {
     // 创建截图按钮
-    CreateWindow(TEXT("BUTTON"), TEXT("截图识别"), 
-                WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-                20, 20, 150, 40, 
-                hwnd, (HMENU)1, NULL, NULL);
+    CreateWindow(TEXT("BUTTON"), TEXT("截图识别"),
+                 WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+                 20, 20, 150, 40,
+                 hwnd, (HMENU)1, NULL, NULL);
 
     // 创建结果文本框
     hwndResultEdit = CreateWindow(TEXT("EDIT"), NULL,
-                                 WS_VISIBLE | WS_CHILD | WS_BORDER | ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL | WS_VSCROLL | WS_HSCROLL,
-                                 20, 80, WINDOW_WIDTH - 60, WINDOW_HEIGHT - 120,
-                                 hwnd, (HMENU)2, NULL, NULL);
+                                  WS_VISIBLE | WS_CHILD | WS_BORDER | ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL | WS_VSCROLL | WS_HSCROLL,
+                                  20, 80, WINDOW_WIDTH - 60, WINDOW_HEIGHT - 120,
+                                  hwnd, (HMENU)2, NULL, NULL);
 
     // 创建字体
-    hFont = CreateFont(18, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
-                      OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
-                      VARIABLE_PITCH, TEXT("微软雅黑"));
+    hFont = CreateFont(18*1.5, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
+                       OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
+                       VARIABLE_PITCH, TEXT("微软雅黑"));
 
     // 设置文本框字体
     SendMessage(hwndResultEdit, WM_SETFONT, (WPARAM)hFont, TRUE);
 }
 
 // 截图回调函数
-void ScreenshotCallback(int event, int x, int y, int, void*)
+void ScreenshotCallback(int event, int x, int y, int, void *)
 {
     if (event == cv::EVENT_LBUTTONDOWN)
     {
@@ -128,8 +130,8 @@ void CaptureScreen()
     HDC hdcWindow = GetDC(hwndDesktop);
     HDC hdcMemDC = CreateCompatibleDC(hdcWindow);
 
-    int width = GetSystemMetrics(SM_CXSCREEN);
-    int height = GetSystemMetrics(SM_CYSCREEN);
+    int width = GetSystemMetrics(SM_CXSCREEN) /** 1.5*/; // SetProcessDPIAware(); // Windows高DPI适配
+    int height = GetSystemMetrics(SM_CYSCREEN) /** 1.5*/;
 
     HBITMAP hBitmap = CreateCompatibleBitmap(hdcWindow, width, height);
     SelectObject(hdcMemDC, hBitmap);
@@ -175,13 +177,13 @@ void OnScreenshot()
     {
         // 提取选定区域
         cv::Mat roi = g_screen(g_rect);
-        
+
         // 运行OCR识别
         std::string result = RunOCR(roi);
-        
+
         // 显示识别结果
         DisplayResult(result);
-        
+
         // 显示选定的区域
         cv::imshow("选定区域", roi);
         cv::waitKey(2000);
@@ -194,7 +196,7 @@ void OnScreenshot()
 }
 
 // OCR识别函数 (模拟实现)
-std::string RunOCR(const cv::Mat& image)
+std::string RunOCR(const cv::Mat &image)
 {
     // 这里应该调用实际的OCR引擎
     // 例如: Tesseract、百度OCR、腾讯OCR等
@@ -204,16 +206,16 @@ std::string RunOCR(const cv::Mat& image)
 }
 
 // 显示识别结果
-void DisplayResult(const std::string& text)
+void DisplayResult(const std::string &text)
 {
     // 转换编码为宽字符
     int len = MultiByteToWideChar(CP_UTF8, 0, text.c_str(), -1, NULL, 0);
-    wchar_t* wstr = new wchar_t[len];
+    wchar_t *wstr = new wchar_t[len];
     MultiByteToWideChar(CP_UTF8, 0, text.c_str(), -1, wstr, len);
-    
+
     // 设置文本框内容
     SetWindowText(hwndResultEdit, wstr);
-    
+
     delete[] wstr;
 }
 
@@ -230,12 +232,13 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             break;
         }
         break;
-        
+
     case WM_DESTROY:
-        if (hFont) DeleteObject(hFont);
+        if (hFont)
+            DeleteObject(hFont);
         PostQuitMessage(0);
         break;
-        
+
     default:
         return DefWindowProc(hwnd, msg, wParam, lParam);
     }

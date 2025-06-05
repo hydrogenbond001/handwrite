@@ -70,13 +70,13 @@ add_definitions(-DNOMINMAX)
 # ---------------------------------------------------------------------------
 # 设置 OpenCV 路径（可被 -DOpenCV_DIR=xxx 覆盖）
 if(NOT OpenCV_DIR)
-    set(OpenCV_DIR "C:/Users/L3101/Documents/github/ncnn-20250428-windows-vs2022/opencv_mingw")  # 修改为你的路径
+    set(OpenCV_DIR "C:/Users/L3101/Documents/GitHub/handwrite/opencv_mingw")  # 修改为你的路径
 endif()
 
 find_package(OpenCV REQUIRED)
 
 if(NOT ncnn_DIR)
-    set(ncnn_DIR "C:/Users/L3101/Documents/github/ncnn-20250428-windows-vs2022/ncnn_w64dev/lib/cmake/ncnn")  # 修改为你的路径
+    set(ncnn_DIR "C:/Users/L3101/Documents/GitHub/handwrite/ncnn_w64dev/lib/cmake/ncnn")  # 修改为你的路径
 endif()
 find_package(ncnn REQUIRED)
 message(STATUS "ncnn_DIR = ${ncnn_DIR}")
