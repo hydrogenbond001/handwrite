@@ -3,7 +3,7 @@
 #include <string>
 #include <iostream>
 #include <main.h>
-#define WINDOW_WIDTH 500
+#define WINDOW_WIDTH 600
 #define WINDOW_HEIGHT 300
 
 // 全局变量
@@ -27,8 +27,8 @@ void DisplayResult(const std::string &text);
 // 主函数
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR szCmdLine, int iCmdShow)
 {
-    SetProcessDPIAware(); // Windows高DPI适配
-    ::ShowWindow(::GetConsoleWindow(), SW_HIDE);
+    SetProcessDPIAware();                        // Windows高DPI适配
+    ::ShowWindow(::GetConsoleWindow(), SW_HIDE); //  隐藏控制台窗口
     // 注册窗口类
     WNDCLASS wc = {0};
     wc.lpfnWndProc = WndProc;
@@ -91,7 +91,7 @@ void CreateUI(HWND hwnd)
                                   hwnd, (HMENU)2, NULL, NULL);
 
     // 创建字体
-    hFont = CreateFont(18*1.5, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
+    hFont = CreateFont(18 * 1.5, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
                        OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
                        VARIABLE_PITCH, TEXT("微软雅黑"));
 
@@ -169,7 +169,11 @@ void OnScreenshot()
     // 等待用户选择完成
     while (!g_finishedSelection)
     {
-        cv::waitKey(30);
+        if (cv::waitKey(10) == 27)
+        {
+            cv::destroyAllWindows();
+            g_drawing = false;
+        }
     }
 
     // 检查是否选择了有效区域
@@ -177,7 +181,7 @@ void OnScreenshot()
     {
         // 提取选定区域
         cv::Mat roi = g_screen(g_rect);
-
+        // roi = PreprocessImage(roi);
         // 运行OCR识别
         std::string result = RunOCR(roi);
 
@@ -185,9 +189,9 @@ void OnScreenshot()
         DisplayResult(result);
 
         // 显示选定的区域
-        cv::imshow("选定区域", roi);
-        cv::waitKey(2000);
-        cv::destroyAllWindows();
+        // cv::imshow("选定区域", roi);
+        // cv::waitKey(2000);
+        // cv::destroyAllWindows();
     }
     else
     {
@@ -208,13 +212,56 @@ std::string RunOCR(const cv::Mat &image)
 // 显示识别结果
 void DisplayResult(const std::string &text)
 {
+    // 参数检查
+    if (hwndResultEdit == NULL || text.empty())
+    {
+        return;
+    }
+
     // 转换编码为宽字符
     int len = MultiByteToWideChar(CP_UTF8, 0, text.c_str(), -1, NULL, 0);
+    if (len <= 0)
+    {
+        return;
+    }
+
     wchar_t *wstr = new wchar_t[len];
     MultiByteToWideChar(CP_UTF8, 0, text.c_str(), -1, wstr, len);
 
-    // 设置文本框内容
-    SetWindowText(hwndResultEdit, wstr);
+    // 获取当前文本长度（避免超过最大限制）
+    int currentLength = GetWindowTextLength(hwndResultEdit);
+    const int maxLength = 32000; // EDIT 控件的最大容量
+
+    // 自动换行处理（每60个字符插入换行符）
+    std::wstring formattedText;
+    int lineLength = 0;
+    const int maxLineLength = 20; // 每行最大字符数
+
+    for (int i = 0; wstr[i] != L'\0'; ++i)
+    {
+        formattedText += wstr[i];
+        lineLength++;
+
+        // 达到最大行长度时换行（不拆分单词）
+        if (lineLength >= maxLineLength && std::iswspace(wstr[i]))
+        {
+            formattedText += L"\r\n";
+            lineLength = 0;
+        }
+    }
+
+    // 如果文本框内容过长，清空前半部分
+    if (currentLength + formattedText.length() > maxLength * 0.8)
+    {
+        SetWindowText(hwndResultEdit, L"");
+    }
+
+    // 追加新文本到文本框
+    SendMessage(hwndResultEdit, EM_SETSEL, (WPARAM)currentLength, (LPARAM)currentLength);
+    SendMessage(hwndResultEdit, EM_REPLACESEL, TRUE, (LPARAM)formattedText.c_str());
+
+    // 滚动到最新内容
+    SendMessage(hwndResultEdit, WM_VSCROLL, SB_BOTTOM, 0);
 
     delete[] wstr;
 }
